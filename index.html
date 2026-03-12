@@ -182,7 +182,7 @@ let tiemposTardios = {};
 let nodoSeleccionado = null;
 let aristaSeleccionadaIdx = null;
 let ultimoRespaldo = null;
-
+let duracionProyecto = 0;
 const area = document.getElementById('area');
 const svg = document.getElementById('svg');
 
@@ -374,9 +374,9 @@ function actualizarVista() {
         const esBucle = n1 === n2;
         const doble = aristas.some((other, i) => other.from === a.to && other.to === a.from && n1 !== n2 && i !== index);
         let color = isSelected ? "#ff9800" : (esBucle ? "#39ff14" : (a.from > a.to ? "#a8d5a2" : "#2d5a27"));
-        if(a.holgura===0){
-          color = "#ff0000";
-        }
+        let color = a.holgura === 0 ? "#ff0000" : "#2d5a27";
+        path.setAttribute("stroke", color);
+        path.setAttribute("stroke-width", a.holgura <= 0 ? "6" : "3");
         const markerId = `arrow-${index}`;
         crearMarker(markerId, color);
 
@@ -389,22 +389,7 @@ function actualizarVista() {
             document.getElementById('editEdgeInput').value = a.peso;
             actualizarVista();
         };
-        nodos.forEach(n=>{
-        const texto = document.createElement("div");
-        texto.className = "etiqueta-tiempo"; // <--- Añade esta clase
-// ... resto de tu código    
-    
-        texto.style.position="absolute";
-        texto.style.left = n.x + "px";
-        texto.style.top = (n.y + 35) + "px";
-        texto.style.fontSize="10px";
-        texto.style.color="#000";
-
-        texto.innerHTML =
-        `TE:${tiemposTempranos[n.nombre]}<br>TL:${tiemposTardios[n.nombre]}`;
-
-        area.appendChild(texto);
-        });
+        
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         let d, tx, ty;
 
@@ -425,11 +410,11 @@ function actualizarVista() {
                 tx = (n1.x + n2.x)/2 - uy*15; ty = (n1.y + n2.y)/2 + ux*15;
             }
         }
+    
 
         path.setAttribute("d", d);
         path.setAttribute("stroke", color);
         path.setAttribute("fill", "none");
-        path.setAttribute("stroke-width", isSelected ? "5" : "3");
         path.setAttribute("marker-end", `url(#${markerId})`);
         
         g.appendChild(path);
@@ -441,7 +426,42 @@ function actualizarVista() {
        g.appendChild(crearTextoSVG(tx, ty+15, textoHolgura, "#ff0000"));
        g.appendChild(crearTextoSVG(tx, ty+30, formula, "#000000"));
         svg.appendChild(g);
+       let etiquetaDuracion = document.getElementById("duracionProyecto");
+
+          if(!etiquetaDuracion){
+            etiquetaDuracion = document.createElement("div");
+            etiquetaDuracion.id = "duracionProyecto";
+            etiquetaDuracion.style.position = "absolute";
+            etiquetaDuracion.style.top = "10px";
+            etiquetaDuracion.style.right = "10px";
+            etiquetaDuracion.style.background = "#1b4079";
+            etiquetaDuracion.style.color = "white";
+            etiquetaDuracion.style.padding = "8px";
+            etiquetaDuracion.style.borderRadius = "10px";
+            etiquetaDuracion.style.fontSize = "12px";
+            area.appendChild(etiquetaDuracion);
+        }
+
+etiquetaDuracion.innerHTML = "Duración total: " + duracionProyecto;
     });
+    document.querySelectorAll(".etiqueta-tiempo").forEach(e => e.remove());
+
+    // 3️⃣ Dibujar TE y TL de cada nodo (SOLO UNA VEZ)
+ 
+     nodos.forEach(n=>{
+        const texto = document.createElement("div");
+        texto.className = "etiqueta-tiempo"; // <--- Añade esta clase
+        texto.style.position="absolute";
+        texto.style.left = n.x + "px";
+        texto.style.top = (n.y + 35) + "px";
+        texto.style.fontSize="10px";
+        texto.style.color="#000";
+
+        texto.innerHTML =
+        `TE:${tiemposTempranos[n.nombre]}<br>TL:${tiemposTardios[n.nombre]}`;
+
+        area.appendChild(texto);
+        });
     guardarEnLocalStorage();
 }
 
@@ -547,7 +567,7 @@ function calcularHolguras(){
     }
 
     // calcular duración total
-    let duracion = Math.max(...Object.values(tiemposTempranos));
+    duracionProyecto = Math.max(...Object.values(tiemposTempranos));
 
     nodos.forEach(n=>{
         tiemposTardios[n.nombre] = duracion;
@@ -606,6 +626,7 @@ area.onclick = () => deseleccionarTodo();
 </script>
 </body>
 </html>
+
 
 
 
