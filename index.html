@@ -365,6 +365,8 @@ function habilitarMovimiento(nodoObj) {
 function actualizarVista() {
     calcularHolguras();
     svg.innerHTML = '<defs id="defs"></defs>';
+
+    // 🔹 Dibujo de aristas
     aristas.forEach((a, index) => {
         const n1 = nodos.find(n => n.nombre === a.from);
         const n2 = nodos.find(n => n.nombre === a.to);
@@ -373,23 +375,29 @@ function actualizarVista() {
         const isSelected = aristaSeleccionadaIdx === index;
         const esBucle = n1 === n2;
         const doble = aristas.some((other, i) => other.from === a.to && other.to === a.from && n1 !== n2 && i !== index);
+
+        // Determinar color y grosor
         let color = isSelected ? "#ff9800" : (esBucle ? "#39ff14" : (a.from > a.to ? "#a8d5a2" : "#2d5a27"));
-        let color = a.holgura === 0 ? "#ff0000" : "#2d5a27";
-        path.setAttribute("stroke", color);
-        path.setAttribute("stroke-width", a.holgura <= 0 ? "6" : "3");
+        let grosor = 3;
+        if (a.holgura === 0) { // ruta crítica
+            color = "#ff0000";
+            grosor = 6;
+        }
+
         const markerId = `arrow-${index}`;
         crearMarker(markerId, color);
 
+        // Grupo SVG para la arista
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        g.onclick = (e) => { 
-            e.stopPropagation(); 
+        g.onclick = (e) => {
+            e.stopPropagation();
             deseleccionarTodo();
             aristaSeleccionadaIdx = index;
             document.getElementById('editEdgePanel').style.display = 'block';
             document.getElementById('editEdgeInput').value = a.peso;
             actualizarVista();
         };
-        
+
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         let d, tx, ty;
 
@@ -399,7 +407,8 @@ function actualizarVista() {
         } else {
             const dx = n2.x - n1.x, dy = n2.y - n1.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
-            const ux = dx/dist, uy = dy/dist;
+            const ux = dx / dist, uy = dy / dist;
+
             if (doble) {
                 const midX = (n1.x + n2.x) / 2, midY = (n1.y + n2.y) / 2;
                 const cpX = midX - uy * 35, cpY = midY + ux * 35;
@@ -410,58 +419,51 @@ function actualizarVista() {
                 tx = (n1.x + n2.x)/2 - uy*15; ty = (n1.y + n2.y)/2 + ux*15;
             }
         }
-    
 
         path.setAttribute("d", d);
         path.setAttribute("stroke", color);
+        path.setAttribute("stroke-width", grosor);
         path.setAttribute("fill", "none");
         path.setAttribute("marker-end", `url(#${markerId})`);
-        
+
         g.appendChild(path);
         g.appendChild(crearTextoSVG(tx, ty, a.peso, color));
-
-        let textoHolgura = `H=${a.holgura}`;
-        let formula = a.formula;
-
-       g.appendChild(crearTextoSVG(tx, ty+15, textoHolgura, "#ff0000"));
-       g.appendChild(crearTextoSVG(tx, ty+30, formula, "#000000"));
+        g.appendChild(crearTextoSVG(tx, ty + 15, `H=${a.holgura}`, "#ff0000"));
+        g.appendChild(crearTextoSVG(tx, ty + 30, a.formula, "#000000"));
         svg.appendChild(g);
-       let etiquetaDuracion = document.getElementById("duracionProyecto");
-
-          if(!etiquetaDuracion){
-            etiquetaDuracion = document.createElement("div");
-            etiquetaDuracion.id = "duracionProyecto";
-            etiquetaDuracion.style.position = "absolute";
-            etiquetaDuracion.style.top = "10px";
-            etiquetaDuracion.style.right = "10px";
-            etiquetaDuracion.style.background = "#1b4079";
-            etiquetaDuracion.style.color = "white";
-            etiquetaDuracion.style.padding = "8px";
-            etiquetaDuracion.style.borderRadius = "10px";
-            etiquetaDuracion.style.fontSize = "12px";
-            area.appendChild(etiquetaDuracion);
-        }
-
-etiquetaDuracion.innerHTML = "Duración total: " + duracionProyecto;
     });
-    document.querySelectorAll(".etiqueta-tiempo").forEach(e => e.remove());
 
-    // 3️⃣ Dibujar TE y TL de cada nodo (SOLO UNA VEZ)
- 
-     nodos.forEach(n=>{
+    // 🔹 Mostrar duración total (solo una vez)
+    let etiquetaDuracion = document.getElementById("duracionProyecto");
+    if (!etiquetaDuracion) {
+        etiquetaDuracion = document.createElement("div");
+        etiquetaDuracion.id = "duracionProyecto";
+        etiquetaDuracion.style.position = "absolute";
+        etiquetaDuracion.style.top = "10px";
+        etiquetaDuracion.style.right = "10px";
+        etiquetaDuracion.style.background = "#1b4079";
+        etiquetaDuracion.style.color = "white";
+        etiquetaDuracion.style.padding = "8px";
+        etiquetaDuracion.style.borderRadius = "10px";
+        etiquetaDuracion.style.fontSize = "12px";
+        area.appendChild(etiquetaDuracion);
+    }
+    etiquetaDuracion.innerHTML = "Duración total: " + duracionProyecto;
+
+    // 🔹 Dibujar TE y TL de cada nodo
+    document.querySelectorAll(".etiqueta-tiempo").forEach(e => e.remove());
+    nodos.forEach(n => {
         const texto = document.createElement("div");
-        texto.className = "etiqueta-tiempo"; // <--- Añade esta clase
-        texto.style.position="absolute";
+        texto.className = "etiqueta-tiempo";
+        texto.style.position = "absolute";
         texto.style.left = n.x + "px";
         texto.style.top = (n.y + 35) + "px";
-        texto.style.fontSize="10px";
-        texto.style.color="#000";
-
-        texto.innerHTML =
-        `TE:${tiemposTempranos[n.nombre]}<br>TL:${tiemposTardios[n.nombre]}`;
-
+        texto.style.fontSize = "10px";
+        texto.style.color = "#000";
+        texto.innerHTML = `TE:${tiemposTempranos[n.nombre]}<br>TL:${tiemposTardios[n.nombre]}`;
         area.appendChild(texto);
-        });
+    });
+
     guardarEnLocalStorage();
 }
 
@@ -626,6 +628,7 @@ area.onclick = () => deseleccionarTodo();
 </script>
 </body>
 </html>
+
 
 
 
