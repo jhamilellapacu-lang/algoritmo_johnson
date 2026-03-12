@@ -391,6 +391,9 @@ function actualizarVista() {
         };
         nodos.forEach(n=>{
         const texto = document.createElement("div");
+        texto.className = "etiqueta-tiempo"; // <--- Añade esta clase
+// ... resto de tu código    
+    
         texto.style.position="absolute";
         texto.style.left = n.x + "px";
         texto.style.top = (n.y + 35) + "px";
@@ -603,6 +606,7 @@ area.onclick = () => deseleccionarTodo();
 </script>
 </body>
 </html>
+
 
 
 
