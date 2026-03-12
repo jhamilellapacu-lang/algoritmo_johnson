@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Graph Designer - Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #1b4079;
+            --v-oscuro: #2d5a27;
+            --v-claro: #a8d5a2;
+            --v-fosfor: #39ff14;
+            --bg: #f8fafc;
+            --selected: #ff9800;
+        }
+
+        body { font-family: 'Comfortaa', cursive; margin: 0; display: flex; height: 100vh; background-color: var(--bg); overflow: hidden; }
+
+        #sidebar {
+            width: 320px; background: white; padding: 20px;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 12px; z-index: 100;
+            overflow-y: auto;
+        }
+
+        /* --- ESTILOS DEL MANUAL --- */
+        #manual {
+            background: #eef2ff;
+            border-left: 5px solid #4f46e5;
+            padding: 15px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        .manual-section p {
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e0e7ff;
+        }
+
+        .manual-section b { color: #3730a3; }
+
+        /* --- ESTILOS DE ELEMENTOS --- */
+        .step { padding: 10px; border: 2px solid #edf2f7; border-radius: 12px; background: #fff; }
+        .edit-panel { background: #fff3e0; border: 2px solid var(--selected); display: none; }
+        
+        h2 { 
+            font-size: 0.85rem; color: var(--primary); margin: 0 0 8px 0; 
+            display: flex; align-items: center; gap: 8px;
+        }
+        h2::before { content: '📍'; }
+
+        input, button {
+            width: 100%; padding: 8px; margin-top: 5px;
+            border-radius: 8px; border: 1px solid #cbd5e0;
+            box-sizing: border-box; font-family: inherit; font-size: 0.9rem;
+        }
+
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { filter: brightness(1.2); }
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+        button.danger { background: #e53e3e; }
+        button.secondary { background: #64748b; }
+        button.success { background: #2d5a27; }
+
+        /* RESTRICCIÓN ROJA */
+        .aviso { 
+            font-size: 11px; color: #ff0000; font-weight: bold; 
+            display: block; margin-top: 4px; font-style: italic;
+        }
+
+        #canvas-container { flex-grow: 1; padding: 20px; position: relative; }
+        #area {
+            width: 100%; height: 100%; background: white; border-radius: 30px;
+            position: relative; box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
+            border: 2px dashed #cbd5e0; overflow: hidden;
+        }
+
+        .nodo {
+            width: 55px; height: 55px; border-radius: 50%;
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; position: absolute;
+            transform: translate(-50%, -50%); cursor: grab;
+            z-index: 10; border: 3px solid white; user-select: none;
+            transition: transform 0.2s;
+        }
+        .nodo:hover { transform: translate(-50%, -50%) scale(1.1); filter: brightness(1.1); }
+        .nodo:active { cursor: grabbing; transform: translate(-50%, -50%) scale(0.95); }
+        .nodo.selected { background: var(--selected) !important; box-shadow: 0 0 20px rgba(255, 152, 0, 0.5); }
+
+        svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        g { pointer-events: all; cursor: pointer; }
+        .label-peso { font-weight: bold; paint-order: stroke; stroke: white; stroke-width: 4px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div id="sidebar">
+    <h1 style="font-size: 1.2rem; color: var(--primary); margin: 0;">Diseña tu grafo</h1>
+    
+    <div id="manual">
+        <strong style="font-size: 0.9rem; color: var(--primary); display: block; margin-bottom: 8px;">🚀 Manual de uso</strong>
+        <div class="manual-section">
+            <p><b>🔵 Nodos:</b> Escribe nombre y pulsa "Añadir".</p>
+            <p><b>🖱️ Mover:</b> Haz docle click sobre nodo y de inmediato arrasta libremente.</p>
+            <p><b>✍️ Dejar de mover el nodo:</b> Haga un click fuera del nodo para dejar de mover.</p>
+            <p><b>📏 Aristas:</b> Pon el <b>Peso</b> primero, luego presiona sobre el nodo de origen y después el nodo de destino.</p>
+            <p><b>🔄 Bucle:</b> Pon el peso y haz <b>Doble Clic</b> en el nodo.</p>
+            <p><b>✍️ Editar:</b> Toca un nodo, arista o el número de una arista o bucle para editar o borrar.</p>
+            <p><b>💾 Return:</b> El botón mágico ↩️ recupera lo último borrado.</p>
+            <p><b>💾 Exportar:</b> Presiona sobre el recuadro que dice "Nombre del archivo" para poner nombre a tu archivo y presiona el boton exportar.</p>
+            <p><b>💾 Importar:</b> Sube un dibujo que guardaste antes.</p>
+            
+        </div>
+    </div>
+
+    <div class="step">
+        <h2>1. Crear Nodo</h2>
+        <input type="text" id="nodeName" placeholder="Nombre (Ej: A, B)" oninput="this.value = this.value.replace(/[^a-zA-Z]/g, '')">
+        <button onclick="agregarNodo()">Añadir Nodo</button>
+    </div>
+    
+    <div class="step">
+        <h2>2. Peso de Arista</h2>
+        <input type="number" id="edgeWeight" value="1" min="0" oninput="if(this.value<0)this.value=0">
+        <span class="aviso">* Solo números positivos</span>
+    </div>
+
+    <div id="editNodePanel" class="step edit-panel">
+        <h2 style="color: #e67e22;">📝 Editar Nodo</h2>
+        <input type="text" id="editNodeInput">
+        <button class="success" onclick="aplicarCambioNodo()">Guardar</button>
+        <button class="danger" onclick="borrarNodo()">Eliminar</button>
+    </div>
+
+    <div id="editEdgePanel" class="step edit-panel">
+        <h2 style="color: #e67e22;">📏 Editar Arista</h2>
+        <input type="number" id="editEdgeInput">
+        <button class="success" onclick="aplicarCambioArista()">Guardar</button>
+        <button class="danger" onclick="eliminarAristaSeleccionada()">Eliminar</button>
+    </div>
+
+   <div class="step">
+    <h2>Gestión de Archivos</h2>
+
+    <input type="text" id="nombreArchivo" placeholder="Nombre del archivo">
+
+    <div class="btn-group">
+        <button class="secondary" onclick="exportarGrafo()">Exportar</button>
+        <button class="secondary" onclick="document.getElementById('importInput').click()">Importar</button>
+    </div>
+
+    <input type="file" id="importInput" style="display:none" onchange="importarGrafo(event)">
+
+    <button class="success" style="margin-top:5px" onclick="descargarPDF()">Descargar PDF</button>
+</div>
+
+    <div class="btn-group">
+        <button class="danger" onclick="limpiarTodo()">🗑️ Limpiar</button>
+        <button class="secondary" onclick="deshacerLimpieza()">↩️ Return</button>
+    </div>
+    <button onclick="window.location.href='matriz.html'" style="background: #7c3aed;">📊 Ver Matriz</button>
+</div>
+
+<div id="canvas-container">
+    <div id="area">
+        <svg id="svg"><defs id="defs"></defs></svg>
+    </div>
+</div>
+
+<script>
+let nodos = [];
+let aristas = [];
+let tiemposTempranos = {};
+let tiemposTardios = {};
+let nodoSeleccionado = null;
+let aristaSeleccionadaIdx = null;
+let ultimoRespaldo = null;
+
+const area = document.getElementById('area');
+const svg = document.getElementById('svg');
+
+function guardarEnLocalStorage() {
+    const data = {
+        nodos: nodos.map(n => ({ nombre: n.nombre, x: n.x, y: n.y })),
+        aristas: aristas
+    };
+    localStorage.setItem("grafoData", JSON.stringify(data));
+}
+
+function cargarDesdeLocalStorage() {
+
+    let raw = localStorage.getItem("grafoData");
+
+    const temp = sessionStorage.getItem("grafoDataTemp");
+    if(temp){
+        raw = temp;
+        localStorage.setItem("grafoData", temp);
+        sessionStorage.removeItem("grafoDataTemp");
+    }
+
+    if (raw) {
+        const data = JSON.parse(raw);
+
+        data.nodos.forEach(n => recrearNodo(n.nombre, n.x, n.y));
+
+        aristas = data.aristas || [];
+
+        actualizarVista();
+    }
+}
+
+function agregarNodo() {
+    const nombre = document.getElementById('nodeName').value.trim();
+    if (!nombre || nodos.some(n => n.nombre === nombre)) return alert("Nombre inválido o duplicado");
+    const x = 50 + Math.random() * (area.clientWidth - 100);
+    const y = 50 + Math.random() * (area.clientHeight - 100);
+    recrearNodo(nombre, x, y);
+    document.getElementById('nodeName').value = '';
+    actualizarVista();
+}
+
+function recrearNodo(nombre, x, y) {
+    const div = document.createElement('div');
+    div.className = 'nodo';
+    div.textContent = nombre;
+    div.style.left = x + 'px'; div.style.top = y + 'px';
+    const nodoObj = { nombre, x, y, el: div };
+    
+    div.onclick = (e) => {
+        e.stopPropagation();
+        if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
+            const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
+            let existente = aristas.find(a =>
+            a.from === nodoSeleccionado.nombre &&
+            a.to === nodoObj.nombre
+        );
+
+        if(existente){
+            alert("⚠️ Esta arista ya existe. Edita su valor en el editor.");
+            return;
+        }
+            aristas.push({ from: nodoSeleccionado.nombre, to: nodoObj.nombre, peso: peso });
+            deseleccionarTodo();
+        } else {
+            seleccionarNodo(nodoObj);
+        }
+        actualizarVista();
+    };
+
+    div.ondblclick = (e) => {
+        e.stopPropagation();
+        const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
+         let existente = aristas.find(a =>
+        a.from === nodoObj.nombre &&
+        a.to === nodoObj.nombre
+    );
+
+    if(existente){
+        alert("⚠️ Este bucle ya existe. Edítalo en el editor.");
+        return;
+    }
+        aristas.push({ from: nodoObj.nombre, to: nodoObj.nombre, peso: peso });
+        actualizarVista();
+    };
+    
+    habilitarMovimiento(nodoObj);
+    area.appendChild(div);
+    nodos.push(nodoObj);
+}
+
+function seleccionarNodo(nodo) {
+    deseleccionarTodo();
+    nodoSeleccionado = nodo;
+    nodo.el.classList.add('selected');
+    document.getElementById('editNodePanel').style.display = 'block';
+    document.getElementById('editNodeInput').value = nodo.nombre;
+}
+
+function deseleccionarTodo() {
+    nodos.forEach(n => n.el.classList.remove('selected'));
+    nodoSeleccionado = null;
+    aristaSeleccionadaIdx = null;
+    document.getElementById('editNodePanel').style.display = 'none';
+    document.getElementById('editEdgePanel').style.display = 'none';
+    actualizarVista();
+}
+
+function aplicarCambioNodo() {
+    if (!nodoSeleccionado) return;
+    const nuevo = document.getElementById('editNodeInput').value.trim();
+    const viejo = nodoSeleccionado.nombre;
+    nodoSeleccionado.nombre = nuevo;
+    nodoSeleccionado.el.textContent = nuevo;
+    aristas.forEach(a => {
+        if (a.from === viejo) a.from = nuevo;
+        if (a.to === viejo) a.to = nuevo;
+    });
+    deseleccionarTodo();
+}
+
+function borrarNodo() {
+    const nombre = nodoSeleccionado.nombre;
+    nodoSeleccionado.el.remove();
+    nodos = nodos.filter(n => n !== nodoSeleccionado);
+    aristas = aristas.filter(a => a.from !== nombre && a.to !== nombre);
+    deseleccionarTodo();
+}
+
+function aplicarCambioArista() {
+    const nuevoPeso = Math.max(0, parseInt(document.getElementById('editEdgeInput').value) || 0);
+    aristas[aristaSeleccionadaIdx].peso = nuevoPeso;
+    deseleccionarTodo();
+}
+
+function eliminarAristaSeleccionada() {
+    aristas.splice(aristaSeleccionadaIdx, 1);
+    deseleccionarTodo();
+}
+
+function habilitarMovimiento(nodoObj) {
+    let moviendo = false;
+    let difX = 0, difY = 0;
+
+    nodoObj.el.onmousedown = (e) => {
+        moviendo = true;
+        const rect = area.getBoundingClientRect();
+        difX = e.clientX - rect.left - nodoObj.x;
+        difY = e.clientY - rect.top - nodoObj.y;
+        nodoObj.el.style.zIndex = "1000";
+        e.preventDefault();
+    };
+
+    document.addEventListener('mousemove', (e) => {
+        if (!moviendo) return;
+        const rect = area.getBoundingClientRect();
+        let nx = e.clientX - rect.left - difX;
+        let ny = e.clientY - rect.top - difY;
+        
+        // Limites
+        nx = Math.max(30, Math.min(nx, rect.width - 30));
+        ny = Math.max(30, Math.min(ny, rect.height - 30));
+
+        nodoObj.x = nx; nodoObj.y = ny;
+        nodoObj.el.style.left = nx + "px";
+        nodoObj.el.style.top = ny + "px";
+        actualizarVista();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (moviendo) {
+            moviendo = false;
+            nodoObj.el.style.zIndex = "10";
+            guardarEnLocalStorage();
+        }
+    });
+}
+
+function actualizarVista() {
+    calcularHolguras();
+    svg.innerHTML = '<defs id="defs"></defs>';
+    aristas.forEach((a, index) => {
+        const n1 = nodos.find(n => n.nombre === a.from);
+        const n2 = nodos.find(n => n.nombre === a.to);
+        if (!n1 || !n2) return;
+
+        const isSelected = aristaSeleccionadaIdx === index;
+        const esBucle = n1 === n2;
+        const doble = aristas.some((other, i) => other.from === a.to && other.to === a.from && n1 !== n2 && i !== index);
+        let color = isSelected ? "#ff9800" : (esBucle ? "#39ff14" : (a.from > a.to ? "#a8d5a2" : "#2d5a27"));
+        if(a.holgura===0){
+          color = "#ff0000";
+        }
+        const markerId = `arrow-${index}`;
+        crearMarker(markerId, color);
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.onclick = (e) => { 
+            e.stopPropagation(); 
+            deseleccionarTodo();
+            aristaSeleccionadaIdx = index;
+            document.getElementById('editEdgePanel').style.display = 'block';
+            document.getElementById('editEdgeInput').value = a.peso;
+            actualizarVista();
+        };
+        nodos.forEach(n=>{
+        const texto = document.createElement("div");
+        texto.style.position="absolute";
+        texto.style.left = n.x + "px";
+        texto.style.top = (n.y + 35) + "px";
+        texto.style.fontSize="10px";
+        texto.style.color="#000";
+
+        texto.innerHTML =
+        `TE:${tiemposTempranos[n.nombre]}<br>TL:${tiemposTardios[n.nombre]}`;
+
+        area.appendChild(texto);
+        });
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        let d, tx, ty;
+
+        if (esBucle) {
+            d = `M ${n1.x-5} ${n1.y-25} A 18 18 0 1 1 ${n1.x+22} ${n1.y-22}`;
+            tx = n1.x + 15; ty = n1.y - 48;
+        } else {
+            const dx = n2.x - n1.x, dy = n2.y - n1.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const ux = dx/dist, uy = dy/dist;
+            if (doble) {
+                const midX = (n1.x + n2.x) / 2, midY = (n1.y + n2.y) / 2;
+                const cpX = midX - uy * 35, cpY = midY + ux * 35;
+                d = `M ${n1.x + ux*28} ${n1.y + uy*28} Q ${cpX} ${cpY} ${n2.x - ux*32} ${n2.y - uy*32}`;
+                tx = cpX; ty = cpY;
+            } else {
+                d = `M ${n1.x + ux*28} ${n1.y + uy*28} L ${n2.x - ux*32} ${n2.y - uy*32}`;
+                tx = (n1.x + n2.x)/2 - uy*15; ty = (n1.y + n2.y)/2 + ux*15;
+            }
+        }
+
+        path.setAttribute("d", d);
+        path.setAttribute("stroke", color);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke-width", isSelected ? "5" : "3");
+        path.setAttribute("marker-end", `url(#${markerId})`);
+        
+        g.appendChild(path);
+        g.appendChild(crearTextoSVG(tx, ty, a.peso, color));
+
+        let textoHolgura = `H=${a.holgura}`;
+        let formula = a.formula;
+
+       g.appendChild(crearTextoSVG(tx, ty+15, textoHolgura, "#ff0000"));
+       g.appendChild(crearTextoSVG(tx, ty+30, formula, "#000000"));
+        svg.appendChild(g);
+    });
+    guardarEnLocalStorage();
+}
+
+function crearMarker(id, color) {
+    const m = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    m.setAttribute("id", id); m.setAttribute("viewBox", "0 0 10 10");
+    m.setAttribute("refX", "9"); m.setAttribute("refY", "5");
+    m.setAttribute("markerWidth", "6"); m.setAttribute("markerHeight", "6");
+    m.setAttribute("orient", "auto");
+    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    p.setAttribute("d", "M 0 0 L 10 5 L 0 10 z"); p.setAttribute("fill", color);
+    m.appendChild(p);
+    document.getElementById('defs').appendChild(m);
+}
+
+function crearTextoSVG(x, y, txt, color) {
+    const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    t.setAttribute("x", x); t.setAttribute("y", y);
+    t.setAttribute("fill", color); t.setAttribute("class", "label-peso");
+    t.setAttribute("text-anchor", "middle"); t.textContent = txt;
+    return t;
+}
+
+function limpiarTodo() {
+    ultimoRespaldo = localStorage.getItem("grafoData");
+    nodos.forEach(n => n.el.remove());
+    nodos = []; aristas = [];
+    actualizarVista();
+}
+
+function deshacerLimpieza() {
+    if (ultimoRespaldo) {
+        localStorage.setItem("grafoData", ultimoRespaldo);
+        location.reload();
+    } else { alert("No hay nada que recuperar"); }
+}
+
+function exportarGrafo(){
+
+    const raw = localStorage.getItem("grafoData");
+
+    if(!raw){
+        alert("No hay datos para exportar");
+        return;
+    }
+
+    const obj = JSON.parse(raw);
+
+    const jsonOrdenado = JSON.stringify(obj, null, 4); 
+    // 4 espacios de indentación
+
+    let nombreArchivo = document.getElementById("nombreArchivo").value.trim();
+
+    if(nombreArchivo === ""){
+        nombreArchivo = "mi-grafo";
+    }
+
+    if(!nombreArchivo.endsWith(".json")){
+        nombreArchivo += ".json";
+    }
+
+    const blob = new Blob([jsonOrdenado], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nombreArchivo;
+
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    URL.revokeObjectURL(url);
+}
+function importarGrafo(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        localStorage.setItem("grafoData", ev.target.result);
+        location.reload();
+    };
+    reader.readAsText(file);
+}
+function calcularHolguras(){
+
+    tiemposTempranos = {};
+    tiemposTardios = {};
+
+    // inicializar
+    nodos.forEach(n=>{
+        tiemposTempranos[n.nombre] = 0;
+        tiemposTardios[n.nombre] = Infinity;
+    });
+
+    // ORDEN topológico simple
+    for(let i=0;i<nodos.length;i++){
+        aristas.forEach(a=>{
+            let nuevo = tiemposTempranos[a.from] + a.peso;
+            if(nuevo > tiemposTempranos[a.to]){
+                tiemposTempranos[a.to] = nuevo;
+            }
+        });
+    }
+
+    // calcular duración total
+    let duracion = Math.max(...Object.values(tiemposTempranos));
+
+    nodos.forEach(n=>{
+        tiemposTardios[n.nombre] = duracion;
+    });
+
+    for(let i=0;i<nodos.length;i++){
+        aristas.forEach(a=>{
+            let nuevo = tiemposTardios[a.to] - a.peso;
+            if(nuevo < tiemposTardios[a.from]){
+                tiemposTardios[a.from] = nuevo;
+            }
+        });
+    }
+
+    // calcular holgura
+    aristas.forEach(a=>{
+
+        let TE = tiemposTempranos[a.from];
+        let TL = tiemposTardios[a.to];
+        let d = a.peso;
+
+        a.holgura = TL - TE - d;
+
+        a.formula = `${TL} - ${TE} - ${d} = ${a.holgura}`;
+    });
+
+}
+
+async function descargarPDF() {
+
+    let nombre = document.getElementById("nombreArchivo").value.trim();
+
+    if(nombre === ""){
+        nombre = "mi-grafo";
+    }
+
+    if(!nombre.endsWith(".pdf")){
+        nombre += ".pdf";
+    }
+
+    const { jsPDF } = window.jspdf;
+
+    const canvas = await html2canvas(document.getElementById('area'));
+    const imgData = canvas.toDataURL('image/png');
+
+    const pdf = new jsPDF('l','mm','a4');
+
+    pdf.text("Reporte de Grafo",10,10);
+    pdf.addImage(imgData,'PNG',10,20,260,150);
+
+    pdf.save(nombre);
+}
+
+window.onload = cargarDesdeLocalStorage;
+area.onclick = () => deseleccionarTodo();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
