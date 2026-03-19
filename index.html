@@ -245,8 +245,7 @@ function recrearNodo(nombre, x, y) {
     // Si ya hay un nodo seleccionado → crear arista
     if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
         let existente = aristas.find(a =>
-          (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
-          (a.from === nodoObj.nombre && a.to === nodoSeleccionado.nombre)
+          (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) 
 );
 
         if (existente) {
@@ -274,7 +273,10 @@ function recrearNodo(nombre, x, y) {
     document.getElementById('editNodePanel').style.display = 'block';
     document.getElementById('editNodeInput').value = nodoObj.nombre;
 };
-   
+    nodos.push(nodoObj);
+    area.appendChild(div);
+    habilitarMovimiento(nodoObj);
+}
 function seleccionarNodo(nodo) {
     deseleccionarTodo();
     nodoSeleccionado = nodo;
