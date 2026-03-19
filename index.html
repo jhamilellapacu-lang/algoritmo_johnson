@@ -244,6 +244,11 @@ function recrearNodo(nombre, x, y) {
 
     // Si ya hay un nodo seleccionado → crear arista
     if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
+        if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
+
+           console.log("Seleccionado:", nodoSeleccionado?.nombre, "→", nodoObj.nombre);
+
+    if (nodoSeleccionado === nodoObj) return;
         if (nodoSeleccionado === nodoObj) return;
            let existente = aristas.find(a =>
            (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
@@ -380,7 +385,7 @@ function actualizarVista() {
         const isSelected = aristaSeleccionadaIdx === index;
 
         // Determinar color y grosor
-        let color = isSelected ? "#ff9800" : (esBucle ? "#39ff14" : (a.from > a.to ? "#a8d5a2" : "#2d5a27"));
+        let color = isSelected ? "#ff9800" : (a.from > a.to ? "#a8d5a2" : "#2d5a27");
         let grosor = 3;
         if (a.holgura === 0) { // ruta crítica
             color = "#ff0000";
@@ -625,7 +630,11 @@ async function descargarPDF() {
 }
 
 window.onload = cargarDesdeLocalStorage;
-area.onclick = () => deseleccionarTodo();
+area.onclick = (e) => {
+    if (e.target.id === "area") {
+        deseleccionarTodo();
+    }
+};
 </script>
 </body>
 </html>
