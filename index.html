@@ -236,8 +236,7 @@ function recrearNodo(nombre, x, y) {
     div.textContent = nombre;
     div.style.left = x + 'px'; div.style.top = y + 'px';
     const nodoObj = { nombre, x, y, el: div };
-    
-   div.onclick = (e) => {
+    div.onclick = (e) => {
     e.stopPropagation();
 
     const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
@@ -245,13 +244,12 @@ function recrearNodo(nombre, x, y) {
     // Si ya hay un nodo seleccionado → crear arista
     if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
 
-           console.log("Seleccionado:", nodoSeleccionado?.nombre, "→", nodoObj.nombre);
-        if (nodoSeleccionado === nodoObj) return;
-           let existente = aristas.find(a =>
-           (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
-           (a.from === nodoObj.nombre && a.to === nodoSeleccionado.nombre)
-    );
+        console.log("Seleccionado:", nodoSeleccionado?.nombre, "→", nodoObj.nombre);
 
+        let existente = aristas.find(a =>
+            (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
+            (a.from === nodoObj.nombre && a.to === nodoSeleccionado.nombre)
+        );
 
         if (existente) {
             alert("⚠️ Esta arista ya existe.");
@@ -264,7 +262,7 @@ function recrearNodo(nombre, x, y) {
             peso: peso
         });
 
-        nodoSeleccionado = null; // limpiar selección manualmente
+        nodoSeleccionado = null;
         actualizarVista();
         return;
     }
