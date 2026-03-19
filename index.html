@@ -131,7 +131,11 @@
         <input type="number" id="edgeWeight" value="1" min="0" oninput="if(this.value<0)this.value=0">
         <span class="aviso">* Solo números positivos</span>
     </div>
-
+    <div class="step">
+    <h2>Tiempo Inicial</h2>
+    <input type="number" id="tiempoInicial" value="0">
+    <span class="aviso">Por defecto inicia en 0</span>
+</div>
     <div id="editNodePanel" class="step edit-panel">
         <h2 style="color: #e67e22;">📝 Editar Nodo</h2>
         <input type="text" id="editNodeInput">
@@ -240,11 +244,10 @@ function recrearNodo(nombre, x, y) {
 
     // Si ya hay un nodo seleccionado → crear arista
     if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
-
         let existente = aristas.find(a =>
-            a.from === nodoSeleccionado.nombre &&
-            a.to === nodoObj.nombre
-        );
+          (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
+          (a.from === nodoObj.nombre && a.to === nodoSeleccionado.nombre)
+);
 
         if (existente) {
             alert("⚠️ Esta arista ya existe.");
@@ -271,27 +274,7 @@ function recrearNodo(nombre, x, y) {
     document.getElementById('editNodePanel').style.display = 'block';
     document.getElementById('editNodeInput').value = nodoObj.nombre;
 };
-    div.ondblclick = (e) => {
-        e.stopPropagation();
-        const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
-         let existente = aristas.find(a =>
-        a.from === nodoObj.nombre &&
-        a.to === nodoObj.nombre
-    );
-
-    if(existente){
-        alert("⚠️ Este bucle ya existe. Edítalo en el editor.");
-        return;
-    }
-        aristas.push({ from: nodoObj.nombre, to: nodoObj.nombre, peso: peso });
-        actualizarVista();
-    };
-    
-    habilitarMovimiento(nodoObj);
-    area.appendChild(div);
-    nodos.push(nodoObj);
-}
-
+   
 function seleccionarNodo(nodo) {
     deseleccionarTodo();
     nodoSeleccionado = nodo;
@@ -390,8 +373,6 @@ function actualizarVista() {
         if (!n1 || !n2) return;
 
         const isSelected = aristaSeleccionadaIdx === index;
-        const esBucle = n1 === n2;
-        const doble = aristas.some((other, i) => other.from === a.to && other.to === a.from && n1 !== n2 && i !== index);
 
         // Determinar color y grosor
         let color = isSelected ? "#ff9800" : (esBucle ? "#39ff14" : (a.from > a.to ? "#a8d5a2" : "#2d5a27"));
@@ -418,24 +399,13 @@ function actualizarVista() {
         const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
         let d, tx, ty;
 
-        if (esBucle) {
-            d = `M ${n1.x-5} ${n1.y-25} A 18 18 0 1 1 ${n1.x+22} ${n1.y-22}`;
-            tx = n1.x + 15; ty = n1.y - 48;
-        } else {
-            const dx = n2.x - n1.x, dy = n2.y - n1.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const ux = dx / dist, uy = dy / dist;
+       const dx = n2.x - n1.x, dy = n2.y - n1.y;
+       const dist = Math.sqrt(dx*dx + dy*dy);
+       const ux = dx / dist, uy = dy / dist;
 
-            if (doble) {
-                const midX = (n1.x + n2.x) / 2, midY = (n1.y + n2.y) / 2;
-                const cpX = midX - uy * 35, cpY = midY + ux * 35;
-                d = `M ${n1.x + ux*28} ${n1.y + uy*28} Q ${cpX} ${cpY} ${n2.x - ux*32} ${n2.y - uy*32}`;
-                tx = cpX; ty = cpY;
-            } else {
-                d = `M ${n1.x + ux*28} ${n1.y + uy*28} L ${n2.x - ux*32} ${n2.y - uy*32}`;
-                tx = (n1.x + n2.x)/2 - uy*15; ty = (n1.y + n2.y)/2 + ux*15;
-            }
-        }
+       d = `M ${n1.x + ux*28} ${n1.y + uy*28} L ${n2.x - ux*32} ${n2.y - uy*32}`;
+       tx = (n1.x + n2.x)/2;
+       ty = (n1.y + n2.y)/2;
 
         path.setAttribute("d", d);
         path.setAttribute("stroke", color);
@@ -569,12 +539,21 @@ function calcularHolguras(){
     tiemposTempranos = {};
     tiemposTardios = {};
 
-    // inicializar
-    nodos.forEach(n=>{
-        tiemposTempranos[n.nombre] = 0;
-        tiemposTardios[n.nombre] = Infinity;
-    });
+  const inicio = parseInt(document.getElementById("tiempoInicial").value) || 0;
 
+// primero todos en 0
+nodos.forEach(n=>{
+    tiemposTempranos[n.nombre] = 0;
+    tiemposTardios[n.nombre] = Infinity;
+});
+
+// detectar nodos sin entrada (inicio real)
+nodos.forEach(n=>{
+    const tieneEntrada = aristas.some(a => a.to === n.nombre);
+    if(!tieneEntrada){
+        tiemposTempranos[n.nombre] = inicio;
+    }
+});
     // ORDEN topológico simple
     for(let i=0;i<nodos.length;i++){
         aristas.forEach(a=>{
