@@ -244,11 +244,8 @@ function recrearNodo(nombre, x, y) {
 
     // Si ya hay un nodo seleccionado → crear arista
     if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
-        if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
 
            console.log("Seleccionado:", nodoSeleccionado?.nombre, "→", nodoObj.nombre);
-
-    if (nodoSeleccionado === nodoObj) return;
         if (nodoSeleccionado === nodoObj) return;
            let existente = aristas.find(a =>
            (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
