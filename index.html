@@ -233,27 +233,44 @@ function recrearNodo(nombre, x, y) {
     div.style.left = x + 'px'; div.style.top = y + 'px';
     const nodoObj = { nombre, x, y, el: div };
     
-    div.onclick = (e) => {
-        e.stopPropagation();
-        if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
-            const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
-            let existente = aristas.find(a =>
+   div.onclick = (e) => {
+    e.stopPropagation();
+
+    const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
+
+    // Si ya hay un nodo seleccionado → crear arista
+    if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
+
+        let existente = aristas.find(a =>
             a.from === nodoSeleccionado.nombre &&
             a.to === nodoObj.nombre
         );
 
-        if(existente){
-            alert("⚠️ Esta arista ya existe. Edita su valor en el editor.");
+        if (existente) {
+            alert("⚠️ Esta arista ya existe.");
             return;
         }
-            aristas.push({ from: nodoSeleccionado.nombre, to: nodoObj.nombre, peso: peso });
-            deseleccionarTodo();
-        } else {
-            seleccionarNodo(nodoObj);
-        }
-        actualizarVista();
-    };
 
+        aristas.push({
+            from: nodoSeleccionado.nombre,
+            to: nodoObj.nombre,
+            peso: peso
+        });
+
+        nodoSeleccionado = null; // limpiar selección manualmente
+        actualizarVista();
+        return;
+    }
+
+    // Si no hay selección → seleccionar nodo
+    nodoSeleccionado = nodoObj;
+
+    nodos.forEach(n => n.el.classList.remove('selected'));
+    nodoObj.el.classList.add('selected');
+
+    document.getElementById('editNodePanel').style.display = 'block';
+    document.getElementById('editNodeInput').value = nodoObj.nombre;
+};
     div.ondblclick = (e) => {
         e.stopPropagation();
         const peso = Math.max(0, parseInt(document.getElementById('edgeWeight').value) || 1);
@@ -572,7 +589,7 @@ function calcularHolguras(){
     duracionProyecto = Math.max(...Object.values(tiemposTempranos));
 
     nodos.forEach(n=>{
-        tiemposTardios[n.nombre] = duracion;
+        tiemposTardios[n.nombre] = duracionProyecto;
     });
 
     for(let i=0;i<nodos.length;i++){
