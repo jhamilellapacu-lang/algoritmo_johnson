@@ -244,9 +244,12 @@ function recrearNodo(nombre, x, y) {
 
     // Si ya hay un nodo seleccionado → crear arista
     if (nodoSeleccionado && nodoSeleccionado !== nodoObj) {
-        let existente = aristas.find(a =>
-          (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) 
-);
+        if (nodoSeleccionado === nodoObj) return;
+           let existente = aristas.find(a =>
+           (a.from === nodoSeleccionado.nombre && a.to === nodoObj.nombre) ||
+           (a.from === nodoObj.nombre && a.to === nodoSeleccionado.nombre)
+    );
+
 
         if (existente) {
             alert("⚠️ Esta arista ya existe.");
@@ -328,40 +331,40 @@ function eliminarAristaSeleccionada() {
 
 function habilitarMovimiento(nodoObj) {
     let moviendo = false;
-    let difX = 0, difY = 0;
 
     nodoObj.el.onmousedown = (e) => {
         moviendo = true;
-        const rect = area.getBoundingClientRect();
-        difX = e.clientX - rect.left - nodoObj.x;
-        difY = e.clientY - rect.top - nodoObj.y;
         nodoObj.el.style.zIndex = "1000";
         e.preventDefault();
     };
 
-    document.addEventListener('mousemove', (e) => {
+    document.onmousemove = (e) => {
         if (!moviendo) return;
+
         const rect = area.getBoundingClientRect();
-        let nx = e.clientX - rect.left - difX;
-        let ny = e.clientY - rect.top - difY;
-        
-        // Limites
+
+        let nx = e.clientX - rect.left;
+        let ny = e.clientY - rect.top;
+
         nx = Math.max(30, Math.min(nx, rect.width - 30));
         ny = Math.max(30, Math.min(ny, rect.height - 30));
 
-        nodoObj.x = nx; nodoObj.y = ny;
+        nodoObj.x = nx;
+        nodoObj.y = ny;
+
         nodoObj.el.style.left = nx + "px";
         nodoObj.el.style.top = ny + "px";
-        actualizarVista();
-    });
 
-    document.addEventListener('mouseup', () => {
+        actualizarVista();
+    };
+
+    document.onmouseup = () => {
         if (moviendo) {
             moviendo = false;
             nodoObj.el.style.zIndex = "10";
             guardarEnLocalStorage();
         }
-    });
+    };
 }
 
 function actualizarVista() {
@@ -445,8 +448,8 @@ function actualizarVista() {
         const texto = document.createElement("div");
         texto.className = "etiqueta-tiempo";
         texto.style.position = "absolute";
-        texto.style.left = n.x + "px";
-        texto.style.top = (n.y + 35) + "px";
+        texto.style.left = (n.x - 20) + "px";
+        texto.style.top = (n.y + 30) + "px";
         texto.style.fontSize = "10px";
         texto.style.color = "#000";
         texto.innerHTML = `TE:${tiemposTempranos[n.nombre]}<br>TL:${tiemposTardios[n.nombre]}`;
